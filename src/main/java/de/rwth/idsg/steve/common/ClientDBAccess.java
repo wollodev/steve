@@ -59,7 +59,7 @@ public class ClientDBAccess {
 			}
 			cs.execute();
 			
-			Statistics stat = new Statistics(
+			return new Statistics(
 					cs.getInt(1),
 					cs.getInt(2),
 					cs.getInt(3),
@@ -71,8 +71,7 @@ public class ClientDBAccess {
 					cs.getInt(9),
 					cs.getInt(10),
 					cs.getInt(11));				
-				
-			return stat;
+
 		} catch (SQLException ex) {
 			LOG.error("SQL exception", ex);
 			throw new RuntimeException(ex);
@@ -586,13 +585,19 @@ public class ClientDBAccess {
 
 			List<Transaction> list = new ArrayList<Transaction>();
 			while ( rs.next() ) {
-								
-				String chargedValue = "";				
-				int stopValue = rs.getInt(8);
-				if (stopValue != 0) {
-					// rs.getInt(6) is the start value
-					chargedValue = String.valueOf(stopValue - rs.getInt(6));
-				}
+
+                String chargedValue = "";
+
+                // From JavaDoc of getInt (previous used method): If the value is SQL NULL, the value returned is 0
+                //
+                // JDBC WTF? Since the stop value can actually be 0, we should not check whether it is 0 but NULL
+                // (which means transaction is ongoing). So we use getObject instead.
+				Integer stopValue = (Integer) rs.getObject(8);
+
+                if (stopValue != null) {
+                    // rs.getInt(6) is the start value
+                    chargedValue = String.valueOf(stopValue - rs.getInt(6));
+                }
 				
 				Transaction ta = new Transaction(
 						rs.getInt(1),
@@ -685,10 +690,10 @@ public class ClientDBAccess {
 				IdTagInfo _returnIdTagInfo = new IdTagInfo();				
 				AuthorizationStatus _returnIdTagInfoStatus = null;
 
-				if (inTransaction == true) {
+				if (inTransaction) {
 					_returnIdTagInfoStatus = AuthorizationStatus.CONCURRENT_TX;
 					
-				} else if (blocked == true) {
+				} else if (blocked) {
 					_returnIdTagInfoStatus = AuthorizationStatus.BLOCKED;
 
 				} else if (expiryDate != null && now.after(expiryDate)) {

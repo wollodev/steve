@@ -340,7 +340,11 @@ public class ServiceDBAccess {
 			pt.setInt(2, connectorId);
 			ResultSet rs = pt.executeQuery();
 			int connector_pk = -1;
-			if (rs.next() == true) connector_pk = rs.getInt(1); else throw new SQLException();
+			if (rs.next()) {
+                connector_pk = rs.getInt(1);
+            } else {
+                throw new SQLException();
+            }
 			DBUtils.releaseResources(null, pt, rs);
 			
 			// We store a log of connector meter values with their timestamps.
@@ -384,7 +388,7 @@ public class ServiceDBAccess {
 					for (ocpp.cs._2012._06.MeterValue.Value valueElement : valueList){
 						// Set the parameter indices for batch execution
 						pt.setInt(1, connector_pk);
-						pt.setInt(2, transactionId.intValue());
+						pt.setInt(2, transactionId);
 						pt.setTimestamp(3, timestamp);
 						pt.setString(4, valueElement.getValue());					
 						/** Start: OCPP 1.5 allows for each "value" element to have optional attributes **/
@@ -463,7 +467,7 @@ public class ServiceDBAccess {
 					// Okay, now end the reservation
 					DBUtils.releaseResources(null, pt, rs);
 					pt = connect.prepareStatement("DELETE FROM reservation WHERE reservation_pk=?");
-					pt.setInt(1, reservationId.intValue());
+					pt.setInt(1, reservationId);
 					// Execute the query
 					int countRes = pt.executeUpdate();
 					// Validate the change
@@ -556,7 +560,7 @@ public class ServiceDBAccess {
 			// Execute and get the result of the SQL query
 			rs = pt.executeQuery();
 
-			if (rs.next() == true) {	
+			if (rs.next()) {
 				// Read the DB row values
 				sqlAuthData = new SQLIdTagData(
 						rs.getString(1),
@@ -592,7 +596,7 @@ public class ServiceDBAccess {
 			
 			// Execute and get the result of the SQL query
 			rs = pt.executeQuery();			
-			if (rs.next() == true) connectorId = rs.getInt(1);
+			if (rs.next()) connectorId = rs.getInt(1);
 			
 		} catch (SQLException ex) {
 			LOG.error("SQL exception", ex);
