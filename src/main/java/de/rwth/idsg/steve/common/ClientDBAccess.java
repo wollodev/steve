@@ -586,19 +586,19 @@ public class ClientDBAccess {
 			List<Transaction> list = new ArrayList<Transaction>();
 			while ( rs.next() ) {
 
-                String chargedValue = "";
+				String chargedValue = "";
 
-                // From JavaDoc of getInt (previous used method): If the value is SQL NULL, the value returned is 0
-                //
-                // JDBC WTF? Since the stop value can actually be 0, we should not check whether it is 0 but NULL
-                // (which means transaction is ongoing). So we use getObject instead.
+				// From JavaDoc of getInt (previous used method): If the value is SQL NULL, the value returned is 0
+				//
+				// JDBC WTF? Since the stop value can actually be 0, we should not check whether it is 0 but NULL
+				// (which means transaction is ongoing). So we use getObject instead.
 				Integer stopValue = (Integer) rs.getObject(8);
 
-                if (stopValue != null) {
-                    // rs.getInt(6) is the start value
-                    chargedValue = String.valueOf(stopValue - rs.getInt(6));
-                }
-				
+				if (stopValue != null) {
+					// rs.getInt(6) is the start value
+					chargedValue = String.valueOf(stopValue - rs.getInt(6));
+				}
+
 				Transaction ta = new Transaction(
 						rs.getInt(1),
 						rs.getString(2),
