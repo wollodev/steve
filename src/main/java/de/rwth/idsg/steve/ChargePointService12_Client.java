@@ -4,6 +4,7 @@ import de.rwth.idsg.steve.common.utils.DateTimeUtils;
 import de.rwth.idsg.steve.html.InputException;
 import ocpp.cp._2010._08.*;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
+import org.apache.cxf.ws.addressing.WSAddressingFeature;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ public class ChargePointService12_Client {
 
     static {
         factory.setBindingId("http://schemas.xmlsoap.org/wsdl/soap12/");
+        factory.getFeatures().add(new WSAddressingFeature());
         factory.setServiceClass(ChargePointService.class);
     }
 

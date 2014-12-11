@@ -4,6 +4,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 import javax.annotation.Resource;
+import javax.xml.datatype.XMLGregorianCalendar;
 import javax.xml.ws.WebServiceContext;
 import javax.xml.ws.handler.MessageContext;
 
@@ -87,17 +88,12 @@ public class CentralSystemService15_Impl implements CentralSystemService {
                 chargeBoxIdentity,
                 new Timestamp(now.getMillis()));
 
-        BootNotificationResponse _return = new BootNotificationResponse();
-        RegistrationStatus _returnStatus;
+        RegistrationStatus status = (isRegistered) ? RegistrationStatus.ACCEPTED : RegistrationStatus.REJECTED;
 
-        if (isRegistered) {
-            _returnStatus = RegistrationStatus.ACCEPTED;
-            _return.setCurrentTime(DateTimeUtils.convertToXMLGregCal(now));
-            _return.setHeartbeatInterval(Constants.HEARTBEAT_INTERVAL);
-        } else {
-            _returnStatus = RegistrationStatus.REJECTED;
-        }
-        _return.setStatus(_returnStatus);
+        BootNotificationResponse _return = new BootNotificationResponse();
+        _return.setCurrentTime(DateTimeUtils.convertToXMLGregCal(now));
+        _return.setHeartbeatInterval(Constants.HEARTBEAT_INTERVAL);
+        _return.setStatus(status);
         return _return;
     }
 
@@ -120,7 +116,13 @@ public class CentralSystemService15_Impl implements CentralSystemService {
 
         // Optional fields
         String errorInfo = parameters.getInfo();
-        Timestamp timeStamp = DateTimeUtils.convertToTimestamp(parameters.getTimestamp());
+        XMLGregorianCalendar reqTimestamp = parameters.getTimestamp();
+        Timestamp timeStamp;
+        if (reqTimestamp == null) {
+            timeStamp = new Timestamp(new DateTime().getMillis());
+        } else {
+            timeStamp = DateTimeUtils.convertToTimestamp(reqTimestamp);
+        }
         String vendorId = parameters.getVendorId();
         String vendorErrorCode = parameters.getVendorErrorCode();
 
