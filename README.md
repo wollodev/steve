@@ -1,3 +1,7 @@
+## Disclaimer: This branch contains the old code base which is not maintained any more. Consider using the version in master branch.
+
+---
+
 ![SteVe](src/main/webapp/images/logo.png)
 =====
 
