@@ -2,6 +2,7 @@ package de.rwth.idsg.steve.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 import com.zaxxer.hikari.HikariConfig;
@@ -150,6 +151,9 @@ public class BeanConfiguration extends WebMvcConfigurerAdapter {
     public void configureMessageConverters(final List<HttpMessageConverter<?>> converters) {
         final ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        objectMapper.registerModule(new JodaModule());
+        objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.
+                WRITE_DATES_AS_TIMESTAMPS , false);
 
         final MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
         converters.add(converter);
