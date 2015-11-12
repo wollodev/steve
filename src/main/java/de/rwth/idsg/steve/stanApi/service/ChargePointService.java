@@ -1,6 +1,8 @@
 package de.rwth.idsg.steve.stanApi.service;
 
+import de.rwth.idsg.steve.ocpp.OcppProtocol;
 import de.rwth.idsg.steve.ocpp.OcppTransport;
+import de.rwth.idsg.steve.ocpp.OcppVersion;
 import de.rwth.idsg.steve.repository.ChargePointRepository;
 import de.rwth.idsg.steve.repository.dto.ChargePoint;
 import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 /**
  * Created by Wolfgang Kluth on 04/11/15.
@@ -34,7 +35,7 @@ public class ChargePointService {
 
     private static int CHARGE_POINT_CONNECTOR_ID = 0;
 
-    public void unlockConnector(String chargeBoxId, int connectorId) throws NoSuchElementException {
+    public void unlockConnector(String chargeBoxId, int connectorId) {
         ChargePoint chargePoint = chargePointRepository.getDetails(chargeBoxId);
 
         String ocppProtocol = chargePoint.getOcppProtocol();
@@ -45,16 +46,18 @@ public class ChargePointService {
         unlockConnectorParams.setConnectorId(connectorId);
         unlockConnectorParams.setChargePointSelectList(chargePointSelects);
 
-        if (isOcpp12(chargePoint)) {
-            chargePointService12Client.unlockConnector(unlockConnectorParams);
-        } else if (isOcpp15(chargePoint)) {
-            chargePointService15Client.unlockConnector(unlockConnectorParams);
-        } else {
-            throw new NoSuchElementException("No OCPP Implementation found.");
+        switch (getVersion(chargePoint)) {
+            case V_12:
+                chargePointService12Client.unlockConnector(unlockConnectorParams);
+                break;
+
+            case V_15:
+                chargePointService15Client.unlockConnector(unlockConnectorParams);
+                break;
         }
     }
 
-    public void startTransaction(String chargeBoxId, int connectorId, String userIdTag) throws NoSuchElementException {
+    public void startTransaction(String chargeBoxId, int connectorId, String userIdTag) {
 
         ChargePoint chargePoint = chargePointRepository.getDetails(chargeBoxId);
 
@@ -62,16 +65,18 @@ public class ChargePointService {
         remoteStartTransactionParams.setConnectorId(connectorId);
         remoteStartTransactionParams.setIdTag(userIdTag);
 
-        if (isOcpp12(chargePoint)) {
-            chargePointService12Client.remoteStartTransaction(remoteStartTransactionParams);
-        } else if (isOcpp15(chargePoint)) {
-            chargePointService15Client.remoteStartTransaction(remoteStartTransactionParams);
-        } else {
-            throw new NoSuchElementException("No OCPP Implementation found.");
+        switch (getVersion(chargePoint)) {
+            case V_12:
+                chargePointService12Client.remoteStartTransaction(remoteStartTransactionParams);
+                break;
+
+            case V_15:
+                chargePointService15Client.remoteStartTransaction(remoteStartTransactionParams);
+                break;
         }
     }
 
-    public void stopTransaction(String chargeBoxId, int transactionId) throws NoSuchElementException {
+    public void stopTransaction(String chargeBoxId, int transactionId) {
 
         ChargePoint chargePoint = chargePointRepository.getDetails(chargeBoxId);
 
@@ -79,12 +84,14 @@ public class ChargePointService {
         remoteStopTransactionParams.setChargePointSelectList(getChargePointSelects(chargePoint));
         remoteStopTransactionParams.setTransactionId(transactionId);
 
-        if (isOcpp12(chargePoint)) {
-            chargePointService12Client.remoteStopTransaction(remoteStopTransactionParams);
-        } else if (isOcpp15(chargePoint)) {
-            chargePointService15Client.remoteStopTransaction(remoteStopTransactionParams);
-        } else {
-            throw new NoSuchElementException("No OCPP Implementation found.");
+        switch (getVersion(chargePoint)) {
+            case V_12:
+                chargePointService12Client.remoteStopTransaction(remoteStopTransactionParams);
+                break;
+
+            case V_15:
+                chargePointService15Client.remoteStopTransaction(remoteStopTransactionParams);
+                break;
         }
     }
 
@@ -101,23 +108,13 @@ public class ChargePointService {
         return Arrays.asList(chargePointSelect);
     }
 
-    private boolean isOcpp12(ChargePoint chargePoint) {
-        return chargePoint.getOcppProtocol().contains("1.2");
+    private OcppVersion getVersion(ChargePoint chargePoint) {
+        OcppProtocol ocppProtocol = OcppProtocol.fromCompositeValue(chargePoint.getOcppProtocol());
+        return ocppProtocol.getVersion();
     }
 
-    private boolean isOcpp15(ChargePoint chargePoint) {
-        return chargePoint.getOcppProtocol().contains("1.5");
-    }
-
-    private OcppTransport getTransportMode(ChargePoint chargePoint) throws NoSuchElementException {
-        String ocppProtocol = chargePoint.getOcppProtocol();
-
-        if (ocppProtocol.contains("S")) {
-            return OcppTransport.SOAP;
-        } else if (ocppProtocol.contains("P")) {
-            return OcppTransport.JSON;
-        }
-
-        throw new NoSuchElementException("no ocpp transport type found.");
+    private OcppTransport getTransportMode(ChargePoint chargePoint) {
+        OcppProtocol ocppProtocol = OcppProtocol.fromCompositeValue(chargePoint.getOcppProtocol());
+        return ocppProtocol.getTransport();
     }
 }
