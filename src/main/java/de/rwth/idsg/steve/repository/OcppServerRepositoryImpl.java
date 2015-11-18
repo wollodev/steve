@@ -1,6 +1,8 @@
 package de.rwth.idsg.steve.repository;
 
-import de.rwth.idsg.steve.ocpp.OcppProtocol;
+import de.rwth.idsg.steve.repository.dto.InsertConnectorStatusParams;
+import de.rwth.idsg.steve.repository.dto.InsertTransactionParams;
+import de.rwth.idsg.steve.repository.dto.UpdateChargeboxParams;
 import de.rwth.idsg.steve.utils.CustomDSL;
 import lombok.extern.slf4j.Slf4j;
 import ocpp.cs._2012._06.Location;
@@ -20,9 +22,9 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-import static jooq.steve.db.tables.Chargebox.CHARGEBOX;
+import static jooq.steve.db.tables.ChargeBox.CHARGE_BOX;
 import static jooq.steve.db.tables.Connector.CONNECTOR;
-import static jooq.steve.db.tables.ConnectorMetervalue.CONNECTOR_METERVALUE;
+import static jooq.steve.db.tables.ConnectorMeterValue.CONNECTOR_METER_VALUE;
 import static jooq.steve.db.tables.ConnectorStatus.CONNECTOR_STATUS;
 import static jooq.steve.db.tables.Transaction.TRANSACTION;
 
@@ -45,33 +47,30 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
     @Autowired private ReservationRepository reservationRepository;
 
     @Override
-    public boolean updateChargebox(OcppProtocol protocol, String vendor, String model,
-                                   String pointSerial, String boxSerial, String fwVersion, String iccid, String imsi,
-                                   String meterType, String meterSerial, String chargeBoxIdentity, DateTime now) {
-
+    public boolean updateChargebox(UpdateChargeboxParams p) {
         int count = DSL.using(config)
-                       .update(CHARGEBOX)
-                       .set(CHARGEBOX.OCPPPROTOCOL, protocol.getCompositeValue())
-                       .set(CHARGEBOX.CHARGEPOINTVENDOR, vendor)
-                       .set(CHARGEBOX.CHARGEPOINTMODEL, model)
-                       .set(CHARGEBOX.CHARGEPOINTSERIALNUMBER, pointSerial)
-                       .set(CHARGEBOX.CHARGEBOXSERIALNUMBER, boxSerial)
-                       .set(CHARGEBOX.FWVERSION, fwVersion)
-                       .set(CHARGEBOX.ICCID, iccid)
-                       .set(CHARGEBOX.IMSI, imsi)
-                       .set(CHARGEBOX.METERTYPE, meterType)
-                       .set(CHARGEBOX.METERSERIALNUMBER, meterSerial)
-                       .set(CHARGEBOX.LASTHEARTBEATTIMESTAMP, now)
-                       .where(CHARGEBOX.CHARGEBOXID.equal(chargeBoxIdentity))
+                       .update(CHARGE_BOX)
+                       .set(CHARGE_BOX.OCPP_PROTOCOL, p.getOcppProtocol().getCompositeValue())
+                       .set(CHARGE_BOX.CHARGE_POINT_VENDOR, p.getVendor())
+                       .set(CHARGE_BOX.CHARGE_POINT_MODEL, p.getModel())
+                       .set(CHARGE_BOX.CHARGE_POINT_SERIAL_NUMBER, p.getPointSerial())
+                       .set(CHARGE_BOX.CHARGE_BOX_SERIAL_NUMBER, p.getBoxSerial())
+                       .set(CHARGE_BOX.FW_VERSION, p.getFwVersion())
+                       .set(CHARGE_BOX.ICCID, p.getIccid())
+                       .set(CHARGE_BOX.IMSI, p.getImsi())
+                       .set(CHARGE_BOX.METER_TYPE, p.getMeterType())
+                       .set(CHARGE_BOX.METER_SERIAL_NUMBER, p.getMeterSerial())
+                       .set(CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP, p.getHeartbeatTimestamp())
+                       .where(CHARGE_BOX.CHARGE_BOX_ID.equal(p.getChargeBoxId()))
                        .execute();
 
         boolean isRegistered = false;
 
         if (count == 1) {
-            log.info("The chargebox '{}' is registered and its boot acknowledged.", chargeBoxIdentity);
+            log.info("The chargebox '{}' is registered and its boot acknowledged.", p.getChargeBoxId());
             isRegistered = true;
         } else {
-            log.error("The chargebox '{}' is NOT registered and its boot NOT acknowledged.", chargeBoxIdentity);
+            log.error("The chargebox '{}' is NOT registered and its boot NOT acknowledged.", p.getChargeBoxId());
         }
         return isRegistered;
     }
@@ -79,59 +78,49 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
     @Override
     public void updateEndpointAddress(String chargeBoxIdentity, String endpointAddress) {
         DSL.using(config)
-           .update(CHARGEBOX)
-           .set(CHARGEBOX.ENDPOINT_ADDRESS, endpointAddress)
-           .where(CHARGEBOX.CHARGEBOXID.equal(chargeBoxIdentity))
+           .update(CHARGE_BOX)
+           .set(CHARGE_BOX.ENDPOINT_ADDRESS, endpointAddress)
+           .where(CHARGE_BOX.CHARGE_BOX_ID.equal(chargeBoxIdentity))
            .execute();
     }
 
     @Override
     public void updateChargeboxFirmwareStatus(String chargeBoxIdentity, String firmwareStatus) {
         DSL.using(config)
-           .update(CHARGEBOX)
-           .set(CHARGEBOX.FWUPDATESTATUS, firmwareStatus)
-           .set(CHARGEBOX.FWUPDATETIMESTAMP, CustomDSL.utcTimestamp())
-           .where(CHARGEBOX.CHARGEBOXID.equal(chargeBoxIdentity))
+           .update(CHARGE_BOX)
+           .set(CHARGE_BOX.FW_UPDATE_STATUS, firmwareStatus)
+           .set(CHARGE_BOX.FW_UPDATE_TIMESTAMP, CustomDSL.utcTimestamp())
+           .where(CHARGE_BOX.CHARGE_BOX_ID.equal(chargeBoxIdentity))
            .execute();
     }
 
     @Override
     public void updateChargeboxDiagnosticsStatus(String chargeBoxIdentity, String status) {
         DSL.using(config)
-           .update(CHARGEBOX)
-           .set(CHARGEBOX.DIAGNOSTICSSTATUS, status)
-           .set(CHARGEBOX.DIAGNOSTICSTIMESTAMP, CustomDSL.utcTimestamp())
-           .where(CHARGEBOX.CHARGEBOXID.equal(chargeBoxIdentity))
+           .update(CHARGE_BOX)
+           .set(CHARGE_BOX.DIAGNOSTICS_STATUS, status)
+           .set(CHARGE_BOX.DIAGNOSTICS_TIMESTAMP, CustomDSL.utcTimestamp())
+           .where(CHARGE_BOX.CHARGE_BOX_ID.equal(chargeBoxIdentity))
            .execute();
     }
 
     @Override
     public void updateChargeboxHeartbeat(String chargeBoxIdentity, DateTime ts) {
         DSL.using(config)
-           .update(CHARGEBOX)
-           .set(CHARGEBOX.LASTHEARTBEATTIMESTAMP, ts)
-           .where(CHARGEBOX.CHARGEBOXID.equal(chargeBoxIdentity))
+           .update(CHARGE_BOX)
+           .set(CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP, ts)
+           .where(CHARGE_BOX.CHARGE_BOX_ID.equal(chargeBoxIdentity))
            .execute();
     }
 
     @Override
-    public void insertConnectorStatus12(String chargeBoxIdentity, int connectorId, String status, DateTime timestamp,
-                                        String errorCode) {
-        // Delegate
-        this.insertConnectorStatus15(chargeBoxIdentity, connectorId, status, timestamp, errorCode, null, null, null);
-    }
-
-    @Override
-    public void insertConnectorStatus15(final String chargeBoxIdentity, final int connectorId, final String status,
-                                        final DateTime timestamp,
-                                        final String errorCode, final String errorInfo,
-                                        final String vendorId, final String vendorErrorCode) {
+    public void insertConnectorStatus(InsertConnectorStatusParams p) {
 
         DSL.using(config).transaction(configuration -> {
             DSLContext ctx = DSL.using(configuration);
 
             // Step 1
-            insertIgnoreConnector(ctx, chargeBoxIdentity, connectorId);
+            insertIgnoreConnector(ctx, p.getChargeBoxId(), p.getConnectorId());
 
             // -------------------------------------------------------------------------
             // Step 2: We store a log of connector statuses
@@ -140,18 +129,18 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
             ctx.insertInto(CONNECTOR_STATUS)
                .set(CONNECTOR_STATUS.CONNECTOR_PK, DSL.select(CONNECTOR.CONNECTOR_PK)
                                                       .from(CONNECTOR)
-                                                      .where(CONNECTOR.CHARGEBOXID.equal(chargeBoxIdentity))
-                                                      .and(CONNECTOR.CONNECTORID.equal(connectorId))
+                                                      .where(CONNECTOR.CHARGE_BOX_ID.equal(p.getChargeBoxId()))
+                                                      .and(CONNECTOR.CONNECTOR_ID.equal(p.getConnectorId()))
                )
-               .set(CONNECTOR_STATUS.STATUSTIMESTAMP, timestamp)
-               .set(CONNECTOR_STATUS.STATUS, status)
-               .set(CONNECTOR_STATUS.ERRORCODE, errorCode)
-               .set(CONNECTOR_STATUS.ERRORINFO, errorInfo)
-               .set(CONNECTOR_STATUS.VENDORID, vendorId)
-               .set(CONNECTOR_STATUS.VENDORERRORCODE, vendorErrorCode)
+               .set(CONNECTOR_STATUS.STATUS_TIMESTAMP, p.getTimestamp())
+               .set(CONNECTOR_STATUS.STATUS, p.getStatus())
+               .set(CONNECTOR_STATUS.ERROR_CODE, p.getErrorCode())
+               .set(CONNECTOR_STATUS.ERROR_INFO, p.getErrorInfo())
+               .set(CONNECTOR_STATUS.VENDOR_ID, p.getVendorId())
+               .set(CONNECTOR_STATUS.VENDOR_ERROR_CODE, p.getErrorCode())
                .execute();
 
-            log.debug("Stored a new connector status for {}/{}.", chargeBoxIdentity, connectorId);
+            log.debug("Stored a new connector status for {}/{}.", p.getChargeBoxId(), p.getConnectorId());
         });
     }
 
@@ -200,21 +189,12 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
     }
 
     @Override
-    public Integer insertTransaction12(String chargeBoxIdentity, int connectorId, String idTag,
-                                       DateTime startTimestamp, String startMeterValue) {
-        // Delegate
-        return this.insertTransaction15(chargeBoxIdentity, connectorId, idTag, startTimestamp, startMeterValue, null);
-    }
-
-    @Override
-    public Integer insertTransaction15(final String chargeBoxIdentity, final int connectorId, final String idTag,
-                                       final DateTime startTimestamp, final String startMeterValue,
-                                       final Integer reservationId) {
+    public Integer insertTransaction(InsertTransactionParams p) {
 
         return DSL.using(config).transactionResult(configuration -> {
             DSLContext ctx = DSL.using(configuration);
 
-            insertIgnoreConnector(ctx, chargeBoxIdentity, connectorId);
+            insertIgnoreConnector(ctx, p.getChargeBoxId(), p.getConnectorId());
 
             // -------------------------------------------------------------------------
             // Step 1: Insert transaction
@@ -224,12 +204,12 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
                                    .set(CONNECTOR_STATUS.CONNECTOR_PK,
                                            DSL.select(CONNECTOR.CONNECTOR_PK)
                                               .from(CONNECTOR)
-                                              .where(CONNECTOR.CHARGEBOXID.equal(chargeBoxIdentity))
-                                              .and(CONNECTOR.CONNECTORID.equal(connectorId))
+                                              .where(CONNECTOR.CHARGE_BOX_ID.equal(p.getChargeBoxId()))
+                                              .and(CONNECTOR.CONNECTOR_ID.equal(p.getConnectorId()))
                                    )
-                                   .set(TRANSACTION.IDTAG, idTag)
-                                   .set(TRANSACTION.STARTTIMESTAMP, startTimestamp)
-                                   .set(TRANSACTION.STARTVALUE, startMeterValue)
+                                   .set(TRANSACTION.ID_TAG, p.getIdTag())
+                                   .set(TRANSACTION.START_TIMESTAMP, p.getStartTimestamp())
+                                   .set(TRANSACTION.START_VALUE, p.getStartMeterValue())
                                    .returning(TRANSACTION.TRANSACTION_PK)
                                    .fetchOne()
                                    .getTransactionPk();
@@ -238,8 +218,8 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
             // Step 2 for OCPP 1.5: A startTransaction may be related to a reservation
             // -------------------------------------------------------------------------
 
-            if (reservationId != null) {
-                reservationRepository.used(reservationId, transactionId);
+            if (p.isSetReservationId()) {
+                reservationRepository.used(p.getReservationId(), transactionId);
             }
 
             return transactionId;
@@ -253,11 +233,11 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
     public void updateTransaction(int transactionId, DateTime stopTimestamp, String stopMeterValue) {
         DSL.using(config)
            .update(TRANSACTION)
-           .set(TRANSACTION.STOPTIMESTAMP, stopTimestamp)
-           .set(TRANSACTION.STOPVALUE, stopMeterValue)
+           .set(TRANSACTION.STOP_TIMESTAMP, stopTimestamp)
+           .set(TRANSACTION.STOP_VALUE, stopMeterValue)
            .where(TRANSACTION.TRANSACTION_PK.equal(transactionId))
-                .and(TRANSACTION.STOPTIMESTAMP.isNull())
-                .and(TRANSACTION.STOPVALUE.isNull())
+                .and(TRANSACTION.STOP_TIMESTAMP.isNull())
+                .and(TRANSACTION.STOP_VALUE.isNull())
            .execute();
     }
 
@@ -270,7 +250,7 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
      */
     private void insertIgnoreConnector(DSLContext ctx, String chargeBoxIdentity, int connectorId) {
         int count = ctx.insertInto(CONNECTOR,
-                            CONNECTOR.CHARGEBOXID, CONNECTOR.CONNECTORID)
+                            CONNECTOR.CHARGE_BOX_ID, CONNECTOR.CONNECTOR_ID)
                        .values(chargeBoxIdentity, connectorId)
                        .onDuplicateKeyIgnore() // Important detail
                        .execute();
@@ -283,8 +263,8 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
     private int getConnectorPkFromConnector(DSLContext ctx, String chargeBoxIdentity, int connectorId) {
         return ctx.select(CONNECTOR.CONNECTOR_PK)
                   .from(CONNECTOR)
-                  .where(CONNECTOR.CHARGEBOXID.equal(chargeBoxIdentity)
-                    .and(CONNECTOR.CONNECTORID.equal(connectorId)))
+                  .where(CONNECTOR.CHARGE_BOX_ID.equal(chargeBoxIdentity)
+                    .and(CONNECTOR.CONNECTOR_ID.equal(connectorId)))
                   .fetchOne()
                   .value1();
     }
@@ -292,10 +272,10 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
     private void batchInsertMeterValues12(DSLContext ctx, List<ocpp.cs._2010._08.MeterValue> list, int connectorPk) {
         // Init query with DUMMY values. The actual values are not important.
         BatchBindStep batchBindStep = ctx.batch(
-                ctx.insertInto(CONNECTOR_METERVALUE,
-                        CONNECTOR_METERVALUE.CONNECTOR_PK,
-                        CONNECTOR_METERVALUE.VALUETIMESTAMP,
-                        CONNECTOR_METERVALUE.VALUE)
+                ctx.insertInto(CONNECTOR_METER_VALUE,
+                        CONNECTOR_METER_VALUE.CONNECTOR_PK,
+                        CONNECTOR_METER_VALUE.VALUE_TIMESTAMP,
+                        CONNECTOR_METER_VALUE.VALUE)
                    .values(0, null, null)
         );
 
@@ -314,16 +294,16 @@ public class OcppServerRepositoryImpl implements OcppServerRepository {
                                           Integer transactionId) {
         // Init query with DUMMY values. The actual values are not important.
         BatchBindStep batchBindStep = ctx.batch(
-                ctx.insertInto(CONNECTOR_METERVALUE,
-                        CONNECTOR_METERVALUE.CONNECTOR_PK,
-                        CONNECTOR_METERVALUE.TRANSACTION_PK,
-                        CONNECTOR_METERVALUE.VALUETIMESTAMP,
-                        CONNECTOR_METERVALUE.VALUE,
-                        CONNECTOR_METERVALUE.READINGCONTEXT,
-                        CONNECTOR_METERVALUE.FORMAT,
-                        CONNECTOR_METERVALUE.MEASURAND,
-                        CONNECTOR_METERVALUE.LOCATION,
-                        CONNECTOR_METERVALUE.UNIT)
+                ctx.insertInto(CONNECTOR_METER_VALUE,
+                        CONNECTOR_METER_VALUE.CONNECTOR_PK,
+                        CONNECTOR_METER_VALUE.TRANSACTION_PK,
+                        CONNECTOR_METER_VALUE.VALUE_TIMESTAMP,
+                        CONNECTOR_METER_VALUE.VALUE,
+                        CONNECTOR_METER_VALUE.READING_CONTEXT,
+                        CONNECTOR_METER_VALUE.FORMAT,
+                        CONNECTOR_METER_VALUE.MEASURAND,
+                        CONNECTOR_METER_VALUE.LOCATION,
+                        CONNECTOR_METER_VALUE.UNIT)
                    .values(0, null, null, null, null, null, null, null, null)
         );
 
