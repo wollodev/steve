@@ -77,24 +77,26 @@ public class OcppTagsController {
         if (parentIdTag == null) {
             parentIdTag = ControllerHelper.EMPTY_OPTION;
         }
-        form.setParentIdTagWithoutCheck(parentIdTag);
+        form.setParentIdTag(parentIdTag);
 
+        model.addAttribute("inTransaction", record.getInTransaction());
         model.addAttribute("ocppTagForm", form);
-        model.addAttribute("idTagList", ControllerHelper.idTagEnhancer(ocppTagRepository.getIdTags()));
+        setTags(model);
         return "data-man/ocppTagDetails";
     }
 
     @RequestMapping(value = ADD_PATH, method = RequestMethod.GET)
     public String addGet(Model model) {
-        model.addAttribute("idTagList", ocppTagRepository.getIdTags());
+        setTags(model);
         model.addAttribute("ocppTagForm", new OcppTagForm());
         return "data-man/ocppTagAdd";
     }
 
     @RequestMapping(params = "add", value = ADD_PATH, method = RequestMethod.POST)
     public String addPost(@Valid @ModelAttribute("ocppTagForm") OcppTagForm ocppTagForm,
-                          BindingResult result) {
+                          BindingResult result, Model model) {
         if (result.hasErrors()) {
+            setTags(model);
             return "data-man/ocppTagAdd";
         }
 
@@ -104,8 +106,9 @@ public class OcppTagsController {
 
     @RequestMapping(params = "update", value = UPDATE_PATH, method = RequestMethod.POST)
     public String update(@Valid @ModelAttribute("ocppTagForm") OcppTagForm ocppTagForm,
-                         BindingResult result) {
+                         BindingResult result, Model model) {
         if (result.hasErrors()) {
+            setTags(model);
             return "data-man/ocppTagDetails";
         }
 
@@ -124,6 +127,10 @@ public class OcppTagsController {
         model.addAttribute("idTagList", ocppTagRepository.getIdTags());
         model.addAttribute("parentIdTagList", ocppTagRepository.getParentIdTags());
         model.addAttribute("ocppTagList", ocppTagRepository.getTags(params));
+    }
+
+    private void setTags(Model model) {
+        model.addAttribute("idTagList", ControllerHelper.idTagEnhancer(ocppTagRepository.getIdTags()));
     }
 
     // -------------------------------------------------------------------------
