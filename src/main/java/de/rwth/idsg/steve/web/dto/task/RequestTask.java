@@ -1,9 +1,10 @@
-package de.rwth.idsg.steve.web.dto;
+package de.rwth.idsg.steve.web.dto.task;
 
 import de.rwth.idsg.steve.ocpp.OcppVersion;
 import de.rwth.idsg.steve.ocpp.RequestType;
 import de.rwth.idsg.steve.repository.dto.ChargePointSelect;
 import de.rwth.idsg.steve.utils.StringUtils;
+import lombok.AccessLevel;
 import lombok.Getter;
 import org.joda.time.DateTime;
 
@@ -23,6 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RequestTask {
     private final OcppVersion ocppVersion;
     private final String operationName;
+    private final RequestTaskOrigin origin;
+    private final String caller;
 
     private final Map<String, RequestResult> resultMap;
     private final int resultSize;
@@ -33,13 +36,27 @@ public class RequestTask {
     private AtomicInteger errorCount = new AtomicInteger(0);
     private AtomicInteger responseCount = new AtomicInteger(0);
 
-    public RequestTask(OcppVersion ocppVersion, RequestType requestType, List<ChargePointSelect> chargePointSelectList) {
+    @Getter(AccessLevel.NONE) // disable getter generation
+    private final Object lockObject = new Object();
+
+    public RequestTask(OcppVersion ocppVersion, RequestType requestType, List<ChargePointSelect> cpsList) {
+        this(ocppVersion, requestType, cpsList, RequestTaskOrigin.INTERNAL, "SteVe");
+    }
+
+    /**
+     * Do not expose the constructor, make it package-private
+     */
+    RequestTask(OcppVersion ocppVersion, RequestType requestType, List<ChargePointSelect> cpsList,
+                RequestTaskOrigin origin, String caller) {
+
         this.operationName = StringUtils.getOperationName(requestType);
         this.ocppVersion = ocppVersion;
-        this.resultSize = chargePointSelectList.size();
+        this.resultSize = cpsList.size();
+        this.origin = origin;
+        this.caller = caller;
 
         resultMap = new HashMap<>(resultSize);
-        for (ChargePointSelect cps : chargePointSelectList) {
+        for (ChargePointSelect cps : cpsList) {
             resultMap.put(cps.getChargeBoxId(), new RequestResult());
         }
     }
@@ -50,15 +67,21 @@ public class RequestTask {
 
     public void addNewResponse(String chargeBoxId, String response) {
         resultMap.get(chargeBoxId).setResponse(response);
-        if (resultSize == (errorCount.get() + responseCount.incrementAndGet())) {
-            endTimestamp = DateTime.now();
+
+        synchronized (lockObject) {
+            if (resultSize == (errorCount.get() + responseCount.incrementAndGet())) {
+                endTimestamp = DateTime.now();
+            }
         }
     }
 
     public void addNewError(String chargeBoxId, Exception exception) {
         resultMap.get(chargeBoxId).setErrorMessage(exception.getMessage());
-        if (resultSize == (errorCount.incrementAndGet() + responseCount.get())) {
-            endTimestamp = DateTime.now();
+
+        synchronized (lockObject) {
+            if (resultSize == (errorCount.incrementAndGet() + responseCount.get())) {
+                endTimestamp = DateTime.now();
+            }
         }
     }
 }

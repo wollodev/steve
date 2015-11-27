@@ -10,6 +10,7 @@ import lombok.Getter;
  */
 @Getter
 @Builder
-public final class Heartbeat {
-    private final String chargeBoxId, lastTimestamp;
+public final class OcppTag {
+    private final String idTag, parentIdTag, expiryDate;
+    private final boolean inTransaction, blocked;
 }
