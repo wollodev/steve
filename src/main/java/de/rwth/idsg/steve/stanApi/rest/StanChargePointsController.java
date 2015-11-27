@@ -35,7 +35,7 @@ public class StanChargePointsController {
     // Paths
     // -------------------------------------------------------------------------
 
-    private static final String DETAILS_PATH = "/{chargeBoxId}/details";
+    private static final String DETAILS_PATH = "/{chargeBoxId}";
     private static final String ADD_PATH = "/add";
     private static final String DELETE_PATH = "/{chargeBoxId}/delete";
 

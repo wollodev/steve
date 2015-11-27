@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static jooq.steve.db.tables.Chargebox.CHARGEBOX;
+import static jooq.steve.db.tables.ChargeBox.CHARGE_BOX;
 import static jooq.steve.db.tables.Connector.CONNECTOR;
 import static jooq.steve.db.tables.ConnectorStatus.CONNECTOR_STATUS;
 import static jooq.steve.db.tables.Settings.SETTINGS;
@@ -53,38 +53,38 @@ public class StanChargePointRepository {
     public List<ChargePointDTO> getChargeBoxes() {
 
         int heartbeatInterval = DSL.using(config)
-                                   .select(SETTINGS.HEARTBEATINTERVALINSECONDS)
+                                   .select(SETTINGS.HEARTBEAT_INTERVAL_IN_SECONDS)
                                    .from(SETTINGS)
                                    .fetchOne()
                                    .value1();
 
         List<ChargePointDTO> chargePointDTOs = DSL.using(config)
-                                                  .select(CHARGEBOX.CHARGEBOXID, CHARGEBOX.LASTHEARTBEATTIMESTAMP)
-                                                  .from(CHARGEBOX)
+                                                  .select(CHARGE_BOX.CHARGE_BOX_ID, CHARGE_BOX.LAST_HEARTBEAT_TIMESTAMP)
+                                                  .from(CHARGE_BOX)
                                                   .fetch()
                                                   .map(r -> createChargePointDTO(r.value1(), r.value2(), heartbeatInterval));
 
         Field<Integer> t1Pk = CONNECTOR_STATUS.CONNECTOR_PK.as("t1_pk");
-        Field<DateTime> t1Max = DSL.max(CONNECTOR_STATUS.STATUSTIMESTAMP).as("t1_max");
-        TableLike<?> t1 = DSL.select(t1Pk, t1Max, CONNECTOR_STATUS.ERRORCODE, CONNECTOR_STATUS.STATUS)
+        Field<DateTime> t1Max = DSL.max(CONNECTOR_STATUS.STATUS_TIMESTAMP).as("t1_max");
+        TableLike<?> t1 = DSL.select(t1Pk, t1Max, CONNECTOR_STATUS.ERROR_CODE, CONNECTOR_STATUS.STATUS)
                              .from(CONNECTOR_STATUS)
                              .groupBy(CONNECTOR_STATUS.CONNECTOR_PK)
                              .asTable("t1");
 
         Field<Integer> transCpk = TRANSACTION.CONNECTOR_PK.as("trans_cpk");
-        Field<DateTime> transStartMax = DSL.max(TRANSACTION.STARTTIMESTAMP).as("trans_start_max");
-        Field<Integer> transPk= TRANSACTION.TRANSACTION_PK.as("trans_pk");
-        TableLike<?> trans = DSL.select(transCpk, transStartMax, TRANSACTION.IDTAG, transPk)
+        Field<DateTime> transStartMax = DSL.max(TRANSACTION.START_TIMESTAMP).as("trans_start_max");
+        Field<Integer> transPk = TRANSACTION.TRANSACTION_PK.as("trans_pk");
+        TableLike<?> trans = DSL.select(transCpk, transStartMax, TRANSACTION.ID_TAG, transPk)
                                 .from(TRANSACTION)
-                                .where(TRANSACTION.STOPTIMESTAMP.isNull())
+                                .where(TRANSACTION.START_TIMESTAMP.isNull())
                                 .groupBy(TRANSACTION.CONNECTOR_PK)
                                 .asTable("trans");
 
         List<DummyConnector> connectors = DSL.using(config)
-                                             .select(CONNECTOR.CONNECTORID, CONNECTOR.CHARGEBOXID,
-                                                     t1.field(CONNECTOR_STATUS.STATUS), t1.field(CONNECTOR_STATUS.ERRORCODE),
+                                             .select(CONNECTOR.CONNECTOR_ID, CONNECTOR.CHARGE_BOX_ID,
+                                                     t1.field(CONNECTOR_STATUS.STATUS), t1.field(CONNECTOR_STATUS.ERROR_CODE),
                                                      trans.field(transPk),
-                                                     trans.field(TRANSACTION.IDTAG), trans.field(transStartMax))
+                                                     trans.field(TRANSACTION.ID_TAG), trans.field(transStartMax))
                                              .from(CONNECTOR)
                                              .leftOuterJoin(t1).on(t1Pk.eq(CONNECTOR.CONNECTOR_PK))
                                              .leftOuterJoin(trans).on(transCpk.eq(CONNECTOR.CONNECTOR_PK))
@@ -94,16 +94,16 @@ public class StanChargePointRepository {
 
 
         List<DummyConnector> chargePointStatus = DSL.using(config)
-                                                    .select(CONNECTOR.CONNECTORID, CONNECTOR.CHARGEBOXID,
-                                                            CONNECTOR_STATUS.STATUS, CONNECTOR_STATUS.ERRORCODE)
+                                                    .select(CONNECTOR.CONNECTOR_ID, CONNECTOR.CHARGE_BOX_ID,
+                                                            CONNECTOR_STATUS.STATUS, CONNECTOR_STATUS.ERROR_CODE)
                                                     .from(CONNECTOR_STATUS)
                                                     .join(CONNECTOR)
                                                     .onKey()
                                                     .join(t1)
                                                     .on(CONNECTOR_STATUS.CONNECTOR_PK.equal(t1.field(t1Pk)))
-                                                    .and(CONNECTOR_STATUS.STATUSTIMESTAMP.equal(t1.field(t1Max)))
-                                                    .and(CONNECTOR.CONNECTORID.equal(0)) // filter only chargePoint status
-                                                    .orderBy(CONNECTOR_STATUS.STATUSTIMESTAMP.desc())
+                                                    .and(CONNECTOR_STATUS.STATUS_TIMESTAMP.equal(t1.field(t1Max)))
+                                                    .and(CONNECTOR.CONNECTOR_ID.equal(0)) // filter only chargePoint status
+                                                    .orderBy(CONNECTOR_STATUS.STATUS_TIMESTAMP.desc())
                                                     .fetch()
                                                     .map(r -> new DummyConnector(r.value1(), r.value2(), r.value3(),
                                                             r.value4(), 0, null, null));

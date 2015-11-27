@@ -1,13 +1,13 @@
 package de.rwth.idsg.steve.stanApi.dto;
 
-import lombok.Getter;
+import lombok.Data;
 import org.joda.time.DateTime;
 
 /**
  * Created by Wolfgang Kluth on 10/11/15.
  */
 
-@Getter
+@Data
 public class TransactionDTO {
 
     private Integer transactionId;
@@ -24,7 +24,8 @@ public class TransactionDTO {
         this.startTimestamp = startTimestamp;
     }
 
-    public TransactionDTO(Integer transactionId, DateTime startTimestamp, DateTime stopTimestamp, Double consumption, String chargePoint,
+    public TransactionDTO(Integer transactionId, DateTime startTimestamp, DateTime stopTimestamp, Double consumption,
+                          String chargePoint,
                           Integer connectorId) {
         this.transactionId = transactionId;
         this.startTimestamp = startTimestamp;
