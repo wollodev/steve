@@ -153,9 +153,8 @@
 
         String username = dbUri.getUserInfo().split(":")[0];
         String password = dbUri.getUserInfo().split(":")[1];
-        int port = dbUri.getPort();
 
-        String dbUrl = "jdbc:mysql://" + dbUri.getHost() + ":" + port + dbUri.getPath();
+        String dbUrl = "jdbc:mysql://" + dbUri.getHost() + dbUri.getPath();
 
         project.properties['database.jdbcUrl']=dbUrl;
         project.properties['database.username']=username;
