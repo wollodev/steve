@@ -132,6 +132,43 @@
                 </executions>
             </plugin>
 
+            <!-- Parse environment DB configuration -->
+
+            <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <scripts>
+                        <script><![CDATA[
+        URI dbUri = new URI(System.getenv("CLEARDB_DATABASE_URL"));
+
+        String username = dbUri.getUserInfo().split(":")[0];
+        String password = dbUri.getUserInfo().split(":")[1];
+        int port = dbUri.getPort();
+
+        String dbUrl = "jdbc:mysql://" + dbUri.getHost() + ":" + port + dbUri.getPath();
+
+        project.properties['database.jdbcUrl']=dbUrl;
+        project.properties['database.username']=username;
+        project.properties['database.password']=password;
+        project.properties['database.schema']=dbUri.getPath();
+
+        log.info("DBURL: {}", dbUrl);
+
+        ]]></script>
+                    </scripts>
+                </configuration>
+            </plugin>
+
             <!-- Help: http://stackoverflow.com/questions/6831954 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -261,41 +298,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.codehaus.gmavenplus</groupId>
-                <artifactId>gmavenplus-plugin</artifactId>
-                <version>1.2</version>
-                <executions>
-                    <execution>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>execute</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <scripts>
-                        <script><![CDATA[
-        URI dbUri = new URI(System.getenv("CLEARDB_DATABASE_URL"));
-
-        String username = dbUri.getUserInfo().split(":")[0];
-        String password = dbUri.getUserInfo().split(":")[1];
-        int port = dbUri.getPort();
-
-        String dbUrl = "jdbc:mysql://" + dbUri.getHost() + ":" + port + dbUri.getPath();
-
-        project.properties['database.jdbcUrl']=dbUrl;
-        project.properties['database.username']=username;
-        project.properties['database.password']=password;
-        project.properties['database.schema']=dbUri.getPath();
-
-        log.info("DBURL: {}", dbUrl);
-
-        ]]></script>
-                    </scripts>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>3.2.1</version>
@@ -356,15 +358,6 @@
                         <groupId>mysql</groupId>
                         <artifactId>mysql-connector-java</artifactId>
                         <version>${mysql.jdbc.version}</version>
-                    </dependency>
-
-                    <!-- Groovy for GMaven -->
-
-                    <dependency>
-                        <groupId>org.codehaus.groovy</groupId>
-                        <artifactId>groovy-all</artifactId>
-                        <version>2.4.5</version>
-                        <scope>compile</scope>
                     </dependency>
 
                 </dependencies>
@@ -439,6 +432,15 @@
     </dependencyManagement>
 
     <dependencies>
+
+        <!-- Groovy for GMaven -->
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>2.3.11</version>
+            <scope>compile</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
