@@ -162,8 +162,6 @@
         project.properties['database.password']=password;
         project.properties['database.schema']=dbUri.getPath();
 
-        log.info("DBURL: {}", dbUrl);
-
         ]]></script>
                     </scripts>
                 </configuration>
