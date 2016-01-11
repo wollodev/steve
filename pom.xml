@@ -1,5 +1,5 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.rwth.idsg</groupId>
     <artifactId>steve</artifactId>
@@ -34,7 +34,7 @@
         <jackson.version>2.5.4</jackson.version>
 
         <!-- In Mysql: schema == database (http://dev.mysql.com/doc/refman/5.6/en/glossary.html#glos_schema) -->
-        <jdbcUrl>jdbc:mysql://${db.ip}:${db.port}/${db.schema}</jdbcUrl>
+        <!--<jdbcUrl>jdbc:mysql://${db.ip}:${db.port}/${db.schema}</jdbcUrl>-->
     </properties>
 
     <profiles>
@@ -147,16 +147,20 @@
                             <minimizeJar>false</minimizeJar>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>de.rwth.idsg.steve.Application</mainClass>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>META-INF/spring.handlers</resource>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>META-INF/spring.schemas</resource>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
                                     <resource>META-INF/cxf/bus-extensions.txt</resource>
                                 </transformer>
                             </transformers>
@@ -257,6 +261,38 @@
             </plugin>
 
             <plugin>
+                <groupId>org.codehaus.gmavenplus</groupId>
+                <artifactId>gmavenplus-plugin</artifactId>
+                <version>1.2</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>execute</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <scripts>
+                        <script><![CDATA[
+        URI dbUri = new URI(System.getenv("CLEARDB_DATABASE_URL"));
+
+        String username = dbUri.getUserInfo().split(":")[0];
+        String password = dbUri.getUserInfo().split(":")[1];
+        int port = dbUri.getPort();
+
+        String dbUrl = "jdbc:postgresql://" + dbUri.getHost() + ":" + port + dbUri.getPath();
+
+        project.properties['database.jdbcUrl']=dbUrl
+        project.properties['database.username']=username
+        project.properties['database.password']=password
+        project.properties['database.schema']=dbUri.getPath()
+        ]]></script>
+                    </scripts>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>3.2.1</version>
@@ -273,11 +309,11 @@
 
                 <configuration>
                     <driver>com.mysql.jdbc.Driver</driver>
-                    <url>${jdbcUrl}</url>
-                    <user>${db.user}</user>
-                    <password>${db.password}</password>
+                    <url>${database.jdbcUrl}</url>
+                    <user>${database.username}</user>
+                    <password>${database.password}</password>
                     <schemas>
-                        <schema>${db.schema}</schema>
+                        <schema>${database.schema}</schema>
                     </schemas>
                     <locations>
                         <location>filesystem:src/main/resources/db/migration</location>
@@ -318,6 +354,16 @@
                         <artifactId>mysql-connector-java</artifactId>
                         <version>${mysql.jdbc.version}</version>
                     </dependency>
+
+                    <!-- Groovy for GMaven -->
+
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-all</artifactId>
+                        <version>2.4.5</version>
+                        <scope>compile</scope>
+                    </dependency>
+
                 </dependencies>
 
                 <!-- http://www.jooq.org/doc/3.5/manual/code-generation/codegen-configuration/
@@ -325,9 +371,9 @@
                 <configuration>
                     <jdbc>
                         <driver>com.mysql.jdbc.Driver</driver>
-                        <url>${jdbcUrl}</url>
-                        <user>${db.user}</user>
-                        <password>${db.password}</password>
+                        <url>${database.jdbcUrl}</url>
+                        <user>${database.username}</user>
+                        <password>${database.password}</password>
                     </jdbc>
 
                     <generator>
@@ -335,7 +381,7 @@
                             <name>org.jooq.util.mysql.MySQLDatabase</name>
                             <includes>.*</includes>
                             <excludes/>
-                            <inputSchema>${db.schema}</inputSchema>
+                            <inputSchema>${database.schema}</inputSchema>
                             <unsignedTypes>false</unsignedTypes>
 
                             <customTypes>
