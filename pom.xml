@@ -283,10 +283,13 @@
 
         String dbUrl = "jdbc:mysql://" + dbUri.getHost() + ":" + port + dbUri.getPath();
 
-        project.properties['database.jdbcUrl']=dbUrl
-        project.properties['database.username']=username
-        project.properties['database.password']=password
-        project.properties['database.schema']=dbUri.getPath()
+        project.properties['database.jdbcUrl']=dbUrl;
+        project.properties['database.username']=username;
+        project.properties['database.password']=password;
+        project.properties['database.schema']=dbUri.getPath();
+
+        log.info("DBURL: {}", dbUrl);
+
         ]]></script>
                     </scripts>
                 </configuration>
