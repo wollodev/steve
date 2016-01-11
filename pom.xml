@@ -314,9 +314,9 @@
                     <url>${database.jdbcUrl}</url>
                     <user>${database.username}</user>
                     <password>${database.password}</password>
-                    <schemas>
-                        <schema>${database.schema}</schema>
-                    </schemas>
+                    <!--<schemas>-->
+                        <!--<schema>${database.schema}</schema>-->
+                    <!--</schemas>-->
                     <locations>
                         <location>filesystem:src/main/resources/db/migration</location>
                     </locations>
